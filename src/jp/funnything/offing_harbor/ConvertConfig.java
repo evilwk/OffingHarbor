@@ -25,14 +25,17 @@ public class ConvertConfig {
     public ConvertFormat format;
     public Visibility visibility;
     public boolean useSmartType;
+    public boolean butterknifeInLibrary;
+    public boolean codeForKotlin;
 
     public ConvertConfig() {
         // default values
-
         prefix = ConvertPrefix.NONE;
         format = ConvertFormat.PLAIN;
         visibility = Visibility.PRIVATE;
         useSmartType = false;
+        butterknifeInLibrary = false;
+        codeForKotlin = false;
     }
 }
 

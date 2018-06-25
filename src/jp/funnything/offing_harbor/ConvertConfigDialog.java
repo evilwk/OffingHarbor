@@ -29,6 +29,8 @@ public class ConvertConfigDialog extends DialogWrapper {
     private JRadioButton mVisibilityPackagePrivate;
     private JRadioButton mVisibilityProtected;
     private JCheckBox mSmartTypeCheckBox;
+    private JCheckBox mInLibraryCheckBox;
+    private JCheckBox mCodeForKotlinCheckBox;
 
     public ConvertConfigDialog(Project project, VirtualFile layoutFile) {
         super(project, true);
@@ -51,6 +53,7 @@ public class ConvertConfigDialog extends DialogWrapper {
     @Nullable
     @Override
     protected JComponent createCenterPanel() {
+        Box rootBox = Box.createVerticalBox();
         Box box = Box.createHorizontalBox();
 
         // create prefix
@@ -136,18 +139,23 @@ public class ConvertConfigDialog extends DialogWrapper {
 
         // create smart-type
 
-        Box smartTypeBox = Box.createVerticalBox();
-        smartTypeBox.setAlignmentY(Component.TOP_ALIGNMENT);
-        smartTypeBox.setBorder(IdeBorderFactory.createTitledBorder("Smart type detection", true));
+        Box optionBox = Box.createVerticalBox();
+        optionBox.setAlignmentY(Component.TOP_ALIGNMENT);
+        optionBox.setBorder(IdeBorderFactory.createTitledBorder("Option", true));
 
         mSmartTypeCheckBox = new JCheckBox("Detect Type by ID");
-        smartTypeBox.add(mSmartTypeCheckBox);
+        optionBox.add(mSmartTypeCheckBox);
+
+        mInLibraryCheckBox = new JCheckBox("Butterknife in Library");
+        optionBox.add(mInLibraryCheckBox);
+
+        mCodeForKotlinCheckBox = new JCheckBox("Code for Kotlin");
+        optionBox.add(mCodeForKotlinCheckBox);
 
         box.add(Box.createHorizontalStrut(5));
-        box.add(smartTypeBox);
+        box.add(optionBox);
 
         setConfig(mRepository.getState());
-
         return box;
     }
 
@@ -157,6 +165,8 @@ public class ConvertConfigDialog extends DialogWrapper {
         config.format = getFormat();
         config.visibility = getVisibility();
         config.useSmartType = mSmartTypeCheckBox.isSelected();
+        config.butterknifeInLibrary = mInLibraryCheckBox.isSelected();
+        config.codeForKotlin = mCodeForKotlinCheckBox.isSelected();
         return config;
     }
 
@@ -165,6 +175,8 @@ public class ConvertConfigDialog extends DialogWrapper {
         setFormat(config.format);
         setVisibility(config.visibility);
         mSmartTypeCheckBox.setSelected(config.useSmartType);
+        mInLibraryCheckBox.setSelected(config.butterknifeInLibrary);
+        mCodeForKotlinCheckBox.setSelected(config.codeForKotlin);
 
         applyVisibilityConstraint(config.format);
     }

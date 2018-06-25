@@ -13,8 +13,8 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.SearchScope;
 import com.intellij.psi.search.searches.ClassInheritorsSearch;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -201,9 +201,6 @@ public class ConvertExecutor {
         StringBuilder fieldJavaCode = new StringBuilder();
         StringBuilder methodJavaCode = new StringBuilder();
 
-        String NL = "\n";
-
-
         final String visibility;
         switch (config.visibility) {
             case PROTECTED:
@@ -219,38 +216,84 @@ public class ConvertExecutor {
                 throw new IllegalStateException("assert");
         }
 
-        methodJavaCode.append("private void assignViews() {" + NL);
+        if (config.codeForKotlin) {
+            methodJavaCode.append("private fun assignView() {\n");
+        } else {
+            methodJavaCode.append("private void assignViews() {\n");
+        }
 
         for (AndroidViewInfo info : infos) {
-            String type = config.useSmartType ? info.findOptimalType(viewNameTree) : info.type;
-            String symbol = info.getJavaSymbolName(config);
-
             if (config.format == ConvertConfig.ConvertFormat.ANDROID_ANNOTATIONS) {
-                if (config.prefix.willModify()) {
-                    fieldJavaCode.append(String.format("@ViewById(R.id.%s)" + NL + "%s%s %s;" + NL, info.id, visibility, type, symbol));
-                } else {
-                    fieldJavaCode.append(String.format("@ViewById" + NL + "%s%s %s;" + NL, visibility, type, symbol));
-                }
+                annotations(config, fieldJavaCode, viewNameTree, info, visibility);
             } else if (config.format == ConvertConfig.ConvertFormat.BUTTER_KNIFE) {
-                // Butter Knife always requires resource-id
-                fieldJavaCode.append(String.format("@BindView(R.id.%s)" + NL + "%s%s %s;" + NL, info.id, visibility, type, symbol));
+                butterknife(config, fieldJavaCode, viewNameTree, info, visibility);
             } else {
-                fieldJavaCode.append(String.format("%s%s %s;" + NL, visibility, type, symbol));
-            }
-
-            if (type.equals("View")) {
-                methodJavaCode.append(String.format("    %s = findViewById(R.id.%s);" + NL, symbol, info.id));
-            } else {
-                methodJavaCode.append(String.format("    %s = (%s) findViewById(R.id.%s);" + NL, symbol, type, info.id));
+                plain(config, methodJavaCode, fieldJavaCode, viewNameTree, info, visibility);
             }
         }
 
-        methodJavaCode.append("}" + NL);
+        methodJavaCode.append("}\n");
 
         if (config.format.requireAssignMethod()) {
-            return fieldJavaCode.toString() + NL + methodJavaCode.toString();
+            return fieldJavaCode.toString() + "\n" + methodJavaCode.toString();
         } else {
             return fieldJavaCode.toString();
+        }
+    }
+
+    private void annotations(ConvertConfig config, StringBuilder fieldJavaCode, Tree viewNameTree,
+                             AndroidViewInfo info, String visibility) {
+        String type = config.useSmartType ? info.findOptimalType(viewNameTree) : info.type;
+        String symbol = info.getJavaSymbolName(config);
+
+        if (config.codeForKotlin) {
+            if (config.prefix.willModify()) {
+                fieldJavaCode.append(String.format("@ViewById(R.id.%s)\n" + "%slateinit var %s: %s\n", info.id, visibility, symbol, type));
+            } else {
+                fieldJavaCode.append(String.format("@ViewById\n" + "%slateinit var %s: %s\n", visibility, symbol, type));
+            }
+        } else {
+            if (config.prefix.willModify()) {
+                fieldJavaCode.append(String.format("@ViewById(R.id.%s)\n" + "%s%s %s;\n", info.id, visibility, type, symbol));
+            } else {
+                fieldJavaCode.append(String.format("@ViewById\n" + "%s%s %s;\n", visibility, type, symbol));
+            }
+        }
+    }
+
+    private void butterknife(ConvertConfig config, StringBuilder fieldJavaCode, Tree viewNameTree,
+                             AndroidViewInfo info, String visibility) {
+        String type = config.useSmartType ? info.findOptimalType(viewNameTree) : info.type;
+        String symbol = info.getJavaSymbolName(config);
+
+        String bindStr = config.butterknifeInLibrary ? "@BindView(R2.id.%s)\n" : "@BindView(R.id.%s)\n";
+        if (config.codeForKotlin) {
+            fieldJavaCode.append(String.format(bindStr + "%slateinit var %s: %s\n", info.id, visibility, symbol, type));
+        } else {
+            fieldJavaCode.append(String.format(bindStr + "%s%s %s;\n", info.id, visibility, type, symbol));
+        }
+    }
+
+    private void plain(ConvertConfig config, StringBuilder methodJavaCode, StringBuilder fieldJavaCode, Tree viewNameTree,
+                       AndroidViewInfo info, String visibility) {
+        String type = config.useSmartType ? info.findOptimalType(viewNameTree) : info.type;
+        String symbol = info.getJavaSymbolName(config);
+
+        if (config.codeForKotlin) {
+            fieldJavaCode.append(String.format("%slateinit var %s: %s\n", visibility, symbol, type));
+            if (type.equals("View")) {
+                methodJavaCode.append(String.format("    %s = findViewById(R.id.%s)\n", symbol, info.id));
+            } else {
+                methodJavaCode.append(String.format("    %s = findViewById<%s>(R.id.%s)\n", symbol, type, info.id));
+            }
+        } else {
+            fieldJavaCode.append(String.format("%s%s %s;\n", visibility, type, symbol));
+
+            if (type.equals("View")) {
+                methodJavaCode.append(String.format("    %s = findViewById(R.id.%s);\n", symbol, info.id));
+            } else {
+                methodJavaCode.append(String.format("    %s = (%s) findViewById(R.id.%s);\n", symbol, type, info.id));
+            }
         }
     }
 
