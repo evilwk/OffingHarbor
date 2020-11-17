@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @State(name = "jp.funnything.offing_harbor.ConvertConfigRepository", reloadable = true, storages = {
         @Storage(value = "$PROJECT_FILE$"),
-        @Storage(value = "$PROJECT_CONFIG_DIR$/offing_harbor_config.xml", scheme = StorageScheme.DIRECTORY_BASED)
+        @Storage(value = "$PROJECT_CONFIG_DIR$/offing_harbor_config.xml")
 })
 public class ConvertConfigRepository implements PersistentStateComponent<ConvertConfig> {
     @Nullable
